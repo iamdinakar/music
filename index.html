@@ -1,0 +1,1154 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>The Hidden Math of Music — interactive mini-lab</title>
+  <style>
+    :root{
+      --bg:#0b0f17;
+      --panel: rgba(255,255,255,.035);
+      --panel2: rgba(255,255,255,.02);
+      --text:#e9f0ff;
+      --muted:#9db0d1;
+      --accent:#7aa7ff;
+      --accent2:#b08cff;
+      --good:#49d79a;
+      --warn:#ffcd6b;
+      --bad:#ff6b8b;
+      --border: rgba(255,255,255,.10);
+      --radius:14px;
+    }
+
+    *{box-sizing:border-box}
+    html,body{min-height:100%; background:var(--bg);}
+
+    body{
+      margin:0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+      background:var(--bg);
+      color:var(--text);
+      overflow-x:hidden;
+    }
+
+    a{color:var(--accent)}
+
+    .wrap{max-width:1200px;margin:0 auto;padding:22px 16px 56px}
+
+    header{
+      display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;
+      padding:16px;
+      border:1px solid var(--border);
+      border-radius:var(--radius);
+      background:var(--panel);
+    }
+
+    .title{min-width:min(640px,100%);}    
+    h1{margin:0;font-size: clamp(22px, 2.5vw, 34px);letter-spacing:-.02em;line-height:1.1;}
+    .subtitle{margin:.55rem 0 0;color:var(--muted);max-width:70ch;font-size:14px;}
+
+    .pillbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:flex-end;margin-top:6px;}
+    .pill{
+      padding:8px 10px;
+      border-radius:999px;
+      border:1px solid var(--border);
+      background:transparent;
+      color:var(--text);
+      font-size:13px;
+      display:flex;align-items:center;gap:8px;
+      user-select:none;
+    }
+    .pill b{font-weight:650}
+
+    .btn{
+      appearance:none;
+      border:1px solid var(--border);
+      background:transparent;
+      color:var(--text);
+      border-radius:999px;
+      padding:9px 12px;
+      cursor:pointer;
+      font-weight:650;
+      transition:transform .08s ease, background .15s ease, border-color .15s ease;
+      display:inline-flex;align-items:center;gap:8px;
+      white-space:nowrap;
+    }
+    .btn:active{transform:translateY(1px)}
+    .btn.secondary{background:transparent;font-weight:600;}
+    .btn.good{background:rgba(73,215,154,.14);border-color:rgba(73,215,154,.30)}
+    .btn.warn{background:rgba(255,205,107,.14);border-color:rgba(255,205,107,.30)}
+    .btn.bad{background:rgba(255,107,139,.14);border-color:rgba(255,107,139,.30)}
+    #btnPlay.btn.good{background:rgba(122,167,255,.16);border-color:rgba(122,167,255,.35)}
+
+    .grid{
+      display:grid;
+      grid-template-columns: 1.25fr .75fr;
+      gap:14px;
+      margin-top:14px;
+    }
+    @media (max-width: 980px){
+      .grid{grid-template-columns:1fr}
+      .title{min-width:100%}
+      .pillbar{justify-content:flex-start}
+    }
+
+    .card{
+      border:1px solid var(--border);
+      border-radius:var(--radius);
+      background:var(--panel2);
+      overflow:hidden;
+    }
+    .cardHeader{
+      padding:14px 16px 12px;
+      display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;
+      border-bottom:1px solid rgba(255,255,255,.08);
+    }
+    .cardHeader h2{margin:0;font-size:15px;letter-spacing:-.01em}
+    .cardHeader .hint{color:var(--muted);font-size:13px}
+    .cardBody{padding:14px 16px 16px}
+
+    .controls{display:grid;grid-template-columns: 1fr 1fr;gap:12px;}
+    @media (max-width: 620px){.controls{grid-template-columns:1fr}}
+
+    .control{
+      border:1px solid rgba(255,255,255,.08);
+      border-radius:12px;
+      padding:12px;
+      background:transparent;
+    }
+    .control label{display:flex;justify-content:space-between;gap:10px;font-size:13px;color:var(--muted);margin-bottom:8px;}
+    .control label span.value{color:var(--text);font-variant-numeric:tabular-nums;}
+
+    input[type="range"]{width:100%;accent-color: var(--accent);}
+    select, input[type="number"]{
+      width:100%;
+      padding:10px 10px;
+      border-radius:12px;
+      border:1px solid rgba(255,255,255,.12);
+      background:transparent;
+      color:var(--text);
+      outline:none;
+    }
+
+    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+    .row > * {flex: 1 1 auto}
+    .mini{font-size:12px;color:var(--muted);line-height:1.45;margin-top:8px}
+
+    .viz{display:grid;grid-template-columns: 1fr;gap:10px;}
+    canvas{
+      width:100%;
+      height:240px;
+      background:rgba(255,255,255,.02);
+      border:1px solid rgba(255,255,255,.10);
+      border-radius:12px;
+    }
+
+    .legend{display:flex;gap:10px;flex-wrap:wrap;color:var(--muted);font-size:12px}
+    .legend .dot, .legend .dot2, .legend .dot3{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:6px;vertical-align:middle;}
+    .legend .dot{background:var(--accent);}
+    .legend .dot2{background:var(--accent2);}
+    .legend .dot3{background:var(--good);}
+
+    .score{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+    .meter{flex:1;height:10px;border-radius:999px;border:1px solid rgba(255,255,255,.12);background:transparent;overflow:hidden;min-width:220px;}
+    .meter > div{height:100%;width:30%;background:linear-gradient(90deg, var(--bad), var(--warn), var(--good));border-radius:999px;}
+
+    .badge{border:1px solid rgba(255,255,255,.12);padding:7px 10px;border-radius:999px;background:transparent;font-size:12px;color:var(--text);font-variant-numeric:tabular-nums;white-space:nowrap;}
+
+    details{border:1px solid rgba(255,255,255,.10);border-radius:12px;padding:12px;background:transparent;margin-top:10px;}
+    summary{cursor:pointer;font-weight:650}
+    details p{color:var(--muted);font-size:13px;line-height:1.55;margin:10px 0 0}
+
+    .toast{
+      position:fixed;left:50%;bottom:18px;transform:translateX(-50%);
+      background:rgba(17,24,42,.96);
+      border:1px solid rgba(255,255,255,.12);
+      color:var(--text);
+      padding:10px 12px;border-radius:999px;
+      opacity:0;pointer-events:none;
+      transition:opacity .2s ease, transform .2s ease;
+      font-size:13px;
+      display:flex;gap:10px;align-items:center;
+      z-index:50;
+    }
+    .toast.show{opacity:1;transform:translateX(-50%) translateY(-4px)}
+
+    .kbd{
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size:12px;
+      border:1px solid rgba(255,255,255,.14);
+      background:transparent;
+      padding:3px 6px;border-radius:8px;
+      color:var(--muted)
+    }
+
+    /* Easter egg: synthwave mode */
+    body.synthwave{
+      --bg:#070514;
+      --panel: rgba(255,255,255,.035);
+      --panel2: rgba(255,255,255,.02);
+      --accent:#ff4fd8;
+      --accent2:#49d79a;
+      --muted:#c7b7ff;
+      background:var(--bg);
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="title">
+        <h1>The Hidden Math of Music 🎶</h1>
+        <p class="subtitle">
+          Play tones, stack harmonics, and see why some intervals feel “smooth” while others feel “spicy.”
+          Everything you hear here is generated live with the Web Audio API.
+        </p>
+      </div>
+      <div class="pillbar">
+        <div class="pill">Status: <b id="audioStatus">Muted</b></div>
+        <button class="btn good" id="btnPlay">▶️ Play</button>
+        <button class="btn secondary" id="btnStop">⏹ Stop</button>
+        <button class="btn secondary" id="btnShare">🔗 Copy link</button>
+        <button class="btn secondary" id="btnRandom">🎲 Surprise me</button>
+      </div>
+    </header>
+
+    <!-- Moved visuals up: sits between hero and the lab cards -->
+    <section class="card" style="margin-top:14px">
+      <div class="cardHeader">
+        <h2>Visuals</h2>
+        <div class="hint">Waveform + spectrum + a geometric Lissajous pattern (ratio-driven).</div>
+      </div>
+      <div class="cardBody">
+        <div class="viz">
+          <canvas id="waveCanvas" width="1200" height="220" aria-label="Waveform visualization"></canvas>
+          <canvas id="specCanvas" width="1200" height="220" aria-label="Spectrum visualization"></canvas>
+          <canvas id="geoCanvas"  width="1200" height="220" aria-label="Geometric pattern visualization"></canvas>
+          <div class="legend">
+            <span><span class="dot"></span>Waveform (time)</span>
+            <span><span class="dot2"></span>Spectrum (frequency)</span>
+            <span><span class="dot3"></span>Geometry (ratio)</span>
+            <span class="mini">Easter egg: type <span class="kbd">↑↑↓↓←→←→BA</span></span>
+          </div>
+          <div class="mini">The geometry is a Lissajous curve: two perpendicular sine waves whose frequency ratio comes from your selected interval.</div>
+        </div>
+      </div>
+    </section>
+
+    <div class="grid">
+      <!-- LEFT: interactive lab -->
+      <section class="card">
+        <div class="cardHeader">
+          <h2>Sound Lab</h2>
+          <div class="hint">Tip: try a perfect fifth (3:2) or a tritone (≈ 45:32-ish vibes).</div>
+        </div>
+        <div class="cardBody">
+          <div class="controls">
+            <div class="control">
+              <label>
+                <span>Base frequency (Hz)</span>
+                <span class="value" id="vFreq">220</span>
+              </label>
+              <input id="freq" type="range" min="55" max="880" value="220" step="1" />
+              <div class="mini">This is your “fundamental.” Everything else is built on top of it.</div>
+            </div>
+
+            <div class="control">
+              <label>
+                <span>Wave type</span>
+                <span class="value" id="vWave">sine</span>
+              </label>
+              <select id="wave">
+                <option value="sine">sine (pure)</option>
+                <option value="triangle">triangle (soft)</option>
+                <option value="sawtooth">sawtooth (bright)</option>
+                <option value="square">square (hollow)</option>
+              </select>
+              <div class="mini">Waveform changes the harmonic recipe → changes the timbre.</div>
+            </div>
+
+            <div class="control">
+              <label>
+                <span>Harmonics amount</span>
+                <span class="value" id="vHarm">0.40</span>
+              </label>
+              <input id="harm" type="range" min="0" max="1" value="0.40" step="0.01" />
+              <div class="mini">Adds upper partials (overtones). More = richer, sometimes harsher.</div>
+            </div>
+
+            <div class="control">
+              <label>
+                <span>Attack / Release (ms)</span>
+                <span class="value" id="vEnv">18 / 120</span>
+              </label>
+              <div class="row">
+                <input id="attack" type="range" min="0" max="120" value="18" step="1" />
+                <input id="release" type="range" min="40" max="900" value="120" step="1" />
+              </div>
+              <div class="mini">No clicks. Quick attack feels “plucky.” Long release feels “floaty.”</div>
+            </div>
+
+            <div class="control">
+              <label>
+                <span>Interval / chord</span>
+                <span class="value" id="vInterval">Perfect fifth (3:2)</span>
+              </label>
+              <select id="interval">
+                <optgroup label="Intervals (ratio)">
+                  <option value="1/1">Unison (1:1)</option>
+                  <option value="16/15">Minor 2nd (16:15)</option>
+                  <option value="9/8">Major 2nd (9:8)</option>
+                  <option value="6/5">Minor 3rd (6:5)</option>
+                  <option value="5/4">Major 3rd (5:4)</option>
+                  <option value="4/3">Perfect 4th (4:3)</option>
+                  <option value="45/32">Tritone-ish (45:32)</option>
+                  <option value="3/2" selected>Perfect 5th (3:2)</option>
+                  <option value="8/5">Minor 6th (8:5)</option>
+                  <option value="5/3">Major 6th (5:3)</option>
+                  <option value="9/5">Minor 7th (9:5)</option>
+                  <option value="15/8">Major 7th (15:8)</option>
+                  <option value="2/1">Octave (2:1)</option>
+                </optgroup>
+                <optgroup label="Chords (stacked ratios)">
+                  <option value="CHORD:maj">Major triad (1 : 5/4 : 3/2)</option>
+                  <option value="CHORD:min">Minor triad (1 : 6/5 : 3/2)</option>
+                  <option value="CHORD:7">Dominant 7th (1 : 5/4 : 3/2 : 7/4)</option>
+                  <option value="CHORD:sus4">Sus4 (1 : 4/3 : 3/2)</option>
+                </optgroup>
+              </select>
+              <div class="mini">These “just intonation” ratios make the math extra obvious.</div>
+            </div>
+
+            <div class="control">
+              <label>
+                <span>Second tone mix</span>
+                <span class="value" id="vMix">0.65</span>
+              </label>
+              <input id="mix" type="range" min="0" max="1" value="0.65" step="0.01" />
+              <div class="mini">Blend the interval/chord voices against the fundamental.</div>
+            </div>
+          </div>
+
+          <div style="margin-top:14px" class="score">
+            <span class="badge">“Smoothness” score: <b id="score">—</b></span>
+            <div class="meter" aria-label="Smoothness meter">
+              <div id="meterFill"></div>
+            </div>
+            <span class="badge" id="ratioBadge">ratio: 3:2</span>
+          </div>
+
+          <details>
+            <summary>Why do simple ratios sound “consonant”?</summary>
+            <p>
+              When two tones line up in a simple ratio (like 3:2), their wave cycles meet up regularly.
+              That means fewer slow “beating” patterns and a more stable combined waveform. Complex ratios
+              take longer to repeat, producing more interference patterns that our ears often interpret as tension.
+            </p>
+          </details>
+
+          <details>
+            <summary>What are harmonics (overtones)?</summary>
+            <p>
+              A harmonic is an integer multiple of the fundamental frequency (2×, 3×, 4×...). Instruments
+              naturally produce mixtures of these. Timbre is basically “which harmonics are loud, and how loud?”
+            </p>
+          </details>
+        </div>
+      </section>
+
+      <!-- RIGHT: quick play + mini lesson -->
+      <aside class="card">
+        <div class="cardHeader">
+          <h2>Quick Experiments</h2>
+          <div class="hint">Instant “aha” buttons.</div>
+        </div>
+        <div class="cardBody">
+          <div class="control">
+            <label><span>One-click presets</span><span class="value">Try these</span></label>
+            <div class="row">
+              <button class="btn secondary" data-preset="fifth">✨ Fifth</button>
+              <button class="btn secondary" data-preset="oct">🧊 Octave</button>
+              <button class="btn secondary" data-preset="triad">🎹 Triad</button>
+              <button class="btn secondary bad" data-preset="tritone">🌶 Tritone</button>
+            </div>
+            <div class="row" style="margin-top:10px">
+              <button class="btn secondary" data-preset="pos432">😊 432</button>
+              <button class="btn secondary" data-preset="pos528">🌼 528</button>
+              <button class="btn secondary" data-preset="geometry">🔷 Geometry</button>
+            </div>
+            <div class="mini">Listen + watch the waveform stabilize, the spectrum shift, and the geometry snap into clean ratios.</div>
+          </div>
+
+          <div class="control" style="margin-top:12px">
+            <label><span>Mini lesson: Beats</span><span class="value" id="beatsLabel">—</span></label>
+            <div class="mini" id="beatsText">
+              Beats happen when two frequencies are close together: the loudness “pulses” at the difference frequency.
+              Set an interval near unison (like 16:15) and you’ll hear the wobble.
+            </div>
+          </div>
+
+          <div class="control" style="margin-top:12px">
+            <label><span>Keyboard play</span><span class="value">A S D F</span></label>
+            <div class="mini">
+              Press <span class="kbd">A</span> <span class="kbd">S</span> <span class="kbd">D</span> <span class="kbd">F</span>
+              for a tiny scale around your base frequency (works while audio is enabled).
+            </div>
+          </div>
+
+          <div class="control" style="margin-top:12px">
+            <label><span>About the visuals</span><span class="value">Live analysis</span></label>
+            <div class="mini">
+              Waveform (time) + spectrum (frequency) come from an <code>AnalyserNode</code>. The geometry canvas is a ratio visualization.
+            </div>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite">
+    <span id="toastIcon">✨</span>
+    <span id="toastText">Copied!</span>
+  </div>
+
+<script>
+(() => {
+  // ---------- Helpers ----------
+  const $ = (sel) => document.querySelector(sel);
+  const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
+  const lerp = (a,b,t) => a + (b-a)*t;
+
+  function toast(msg, icon="✨"){
+    const el = $("#toast");
+    $("#toastText").textContent = msg;
+    $("#toastIcon").textContent = icon;
+    el.classList.add("show");
+    clearTimeout(toast._t);
+    toast._t = setTimeout(() => el.classList.remove("show"), 1200);
+  }
+
+  function parseRatio(str){
+    const [a,b] = str.split("/").map(Number);
+    if (!isFinite(a) || !isFinite(b) || b === 0) return 1;
+    return a/b;
+  }
+
+  function gcd(a,b){ a=Math.abs(a); b=Math.abs(b); while(b){ [a,b]=[b,a%b]; } return a||1; }
+  function ratioToNiceString(r){
+    // best-effort convert float to small fraction
+    // Try rational approximations with denominators up to 64
+    let best = {num:1, den:1, err:Math.abs(r-1)};
+    for(let den=1; den<=64; den++){
+      const num = Math.round(r*den);
+      const err = Math.abs(r - num/den);
+      if (err < best.err){ best = {num, den, err}; }
+    }
+    const g = gcd(best.num, best.den);
+    return `${best.num/g}:${best.den/g}`;
+  }
+
+  // ---------- State ----------
+  const state = {
+    freq: 220,
+    wave: "sine",
+    harm: 0.40,
+    attack: 18,
+    release: 120,
+    interval: "3/2",
+    mix: 0.65,
+    isPlaying: false
+  };
+
+  // ---------- URL hash state (shareable) ----------
+  function readHash(){
+    const h = location.hash.replace(/^#/, "");
+    if(!h) return;
+    const params = new URLSearchParams(h);
+    const getNum = (k, def) => {
+      const v = Number(params.get(k));
+      return isFinite(v) ? v : def;
+    };
+    if(params.has("f")) state.freq = clamp(getNum("f", state.freq), 55, 880);
+    if(params.has("w")) state.wave = params.get("w") || state.wave;
+    if(params.has("h")) state.harm = clamp(getNum("h", state.harm), 0, 1);
+    if(params.has("a")) state.attack = clamp(getNum("a", state.attack), 0, 120);
+    if(params.has("r")) state.release = clamp(getNum("r", state.release), 40, 900);
+    if(params.has("i")) state.interval = params.get("i") || state.interval;
+    if(params.has("m")) state.mix = clamp(getNum("m", state.mix), 0, 1);
+  }
+
+  function writeHash(){
+    const p = new URLSearchParams();
+    p.set("f", String(Math.round(state.freq)));
+    p.set("w", state.wave);
+    p.set("h", state.harm.toFixed(2));
+    p.set("a", String(Math.round(state.attack)));
+    p.set("r", String(Math.round(state.release)));
+    p.set("i", state.interval);
+    p.set("m", state.mix.toFixed(2));
+    location.hash = p.toString();
+  }
+
+  // ---------- Audio Graph ----------
+  let ctx = null;
+  let analyser = null;
+  let master = null;
+  let baseOsc = null, intOsc = null;
+  let baseGain = null, intGain = null;
+  let harmFilter = null;
+
+  // For chord mode:
+  let chord = [];
+
+  function ensureAudio(){
+    if(ctx) return;
+    ctx = new (window.AudioContext || window.webkitAudioContext)();
+    analyser = ctx.createAnalyser();
+    analyser.fftSize = 2048;
+    analyser.smoothingTimeConstant = 0.85;
+
+    master = ctx.createGain();
+    master.gain.value = 0.0;
+
+    harmFilter = ctx.createBiquadFilter();
+    harmFilter.type = "lowpass";
+    harmFilter.frequency.value = 16000;
+
+    master.connect(harmFilter);
+    harmFilter.connect(analyser);
+    analyser.connect(ctx.destination);
+
+    $("#audioStatus").textContent = "Ready";
+  }
+
+  function stopVoices(){
+    const now = ctx ? ctx.currentTime : 0;
+    // chord voices
+    for (const v of chord){
+      try{
+        v.g.gain.cancelScheduledValues(now);
+        v.g.gain.setValueAtTime(v.g.gain.value, now);
+        v.g.gain.linearRampToValueAtTime(0.0001, now + 0.05);
+        v.o.stop(now + 0.08);
+      }catch(e){}
+    }
+    chord = [];
+
+    // interval voices
+    if(baseOsc){
+      try{
+        baseGain.gain.cancelScheduledValues(now);
+        intGain.gain.cancelScheduledValues(now);
+        baseGain.gain.setValueAtTime(baseGain.gain.value, now);
+        intGain.gain.setValueAtTime(intGain.gain.value, now);
+        baseGain.gain.linearRampToValueAtTime(0.0001, now + 0.05);
+        intGain.gain.linearRampToValueAtTime(0.0001, now + 0.05);
+        baseOsc.stop(now + 0.08);
+        intOsc.stop(now + 0.08);
+      }catch(e){}
+    }
+    baseOsc = intOsc = null;
+    baseGain = intGain = null;
+  }
+
+  function startVoices(){
+    ensureAudio();
+    stopVoices();
+
+    const now = ctx.currentTime;
+    const attack = state.attack / 1000;
+
+    // Master on
+    master.gain.cancelScheduledValues(now);
+    master.gain.setValueAtTime(master.gain.value, now);
+    master.gain.linearRampToValueAtTime(0.85, now + Math.max(0.01, attack));
+
+    // Perceived brightness "harm": adjust lowpass
+    // 0 -> darker, 1 -> brighter
+    const lp = lerp(1200, 16000, state.harm);
+    harmFilter.frequency.setTargetAtTime(lp, now, 0.04);
+
+    const isChord = state.interval.startsWith("CHORD:");
+    if(isChord){
+      const mode = state.interval.split(":")[1];
+      const ratios = ({
+        maj: [1, 5/4, 3/2],
+        min: [1, 6/5, 3/2],
+        "7": [1, 5/4, 3/2, 7/4],
+        sus4: [1, 4/3, 3/2]
+      })[mode] || [1, 5/4, 3/2];
+
+      // base voice is included in chord set; mix controls overall chord blend vs "solo" base
+      const baseWeight = clamp(1 - state.mix * 0.65, 0.15, 1);
+      const chordWeight = clamp(state.mix, 0, 1);
+
+      // Create chord voices
+      ratios.forEach((rat, idx) => {
+        const o = ctx.createOscillator();
+        o.type = state.wave;
+        o.frequency.value = state.freq * rat;
+
+        const g = ctx.createGain();
+        // Slightly roll off upper chord tones so it's not too shrill
+        const toneDrop = idx === 0 ? 1 : 1 / (1 + idx*0.35);
+        const level = (idx === 0 ? baseWeight : chordWeight) * toneDrop * 0.22;
+
+        g.gain.setValueAtTime(0.0001, now);
+        g.gain.linearRampToValueAtTime(level, now + Math.max(0.01, attack));
+
+        o.connect(g);
+        g.connect(master);
+        o.start(now);
+
+        chord.push({o, g});
+      });
+
+    }else{
+      // Two-osc interval mode
+      baseOsc = ctx.createOscillator();
+      intOsc  = ctx.createOscillator();
+      baseGain = ctx.createGain();
+      intGain  = ctx.createGain();
+
+      baseOsc.type = state.wave;
+      intOsc.type  = state.wave;
+
+      const ratio = parseRatio(state.interval);
+      baseOsc.frequency.value = state.freq;
+      intOsc.frequency.value  = state.freq * ratio;
+
+      // levels
+      const baseLevel = 0.24;
+      const intLevel  = 0.24 * state.mix;
+
+      baseGain.gain.setValueAtTime(0.0001, now);
+      intGain.gain.setValueAtTime(0.0001, now);
+
+      baseGain.gain.linearRampToValueAtTime(baseLevel, now + Math.max(0.01, attack));
+      intGain.gain.linearRampToValueAtTime(intLevel,  now + Math.max(0.01, attack));
+
+      baseOsc.connect(baseGain);
+      intOsc.connect(intGain);
+      baseGain.connect(master);
+      intGain.connect(master);
+
+      baseOsc.start(now);
+      intOsc.start(now);
+    }
+
+    state.isPlaying = true;
+    $("#audioStatus").textContent = "Playing";
+  }
+
+  function stopAll(){
+    if(!ctx) return;
+    const now = ctx.currentTime;
+    const release = state.release / 1000;
+
+    master.gain.cancelScheduledValues(now);
+    master.gain.setValueAtTime(master.gain.value, now);
+    master.gain.linearRampToValueAtTime(0.0001, now + Math.max(0.05, release));
+
+    stopVoices();
+
+    state.isPlaying = false;
+    $("#audioStatus").textContent = "Muted";
+  }
+
+  // ---------- “Smoothness” heuristic ----------
+  function smoothnessScore(){
+    // Lower roughness when ratio is close to simple fractions (small integers).
+    // We compute best approx with small denominator and use that error + complexity.
+    const isChord = state.interval.startsWith("CHORD:");
+    if(isChord){
+      // For chords: average of pairwise interval “simplicity”
+      const mode = state.interval.split(":")[1];
+      const ratios = ({
+        maj: [1, 5/4, 3/2],
+        min: [1, 6/5, 3/2],
+        "7": [1, 5/4, 3/2, 7/4],
+        sus4: [1, 4/3, 3/2]
+      })[mode] || [1, 5/4, 3/2];
+
+      let total = 0, count = 0;
+      for(let i=0;i<ratios.length;i++){
+        for(let j=i+1;j<ratios.length;j++){
+          total += ratioScore(ratios[j]/ratios[i]);
+          count++;
+        }
+      }
+      return total / Math.max(1,count);
+    } else {
+      return ratioScore(parseRatio(state.interval));
+    }
+  }
+
+  function ratioScore(r){
+    // Find best rational with denom <= 32
+    let best = {num:1, den:1, err:Math.abs(r-1)};
+    for(let den=1; den<=32; den++){
+      const num = Math.round(r*den);
+      const err = Math.abs(r - num/den);
+      if(err < best.err) best = {num, den, err};
+    }
+    const g = gcd(best.num, best.den);
+    const num = best.num/g, den = best.den/g;
+    const complexity = (num + den); // smaller is "simpler"
+    const err = best.err;
+
+    // Convert to [0..100], with simple ratios scoring high
+    const s1 = 1 / (1 + complexity*0.15);
+    const s2 = 1 / (1 + err*120);
+    const s = clamp((0.65*s1 + 0.35*s2) * 120, 0, 100);
+    return s;
+  }
+
+  function updateScoreUI(){
+    const s = smoothnessScore();
+    $("#score").textContent = s.toFixed(0) + "/100";
+    $("#meterFill").style.width = clamp(s, 0, 100) + "%";
+
+    const isChord = state.interval.startsWith("CHORD:");
+    if(isChord){
+      const mode = state.interval.split(":")[1];
+      $("#ratioBadge").textContent = "mode: " + mode.toUpperCase();
+    } else {
+      const r = parseRatio(state.interval);
+      $("#ratioBadge").textContent = "ratio: " + ratioToNiceString(r);
+    }
+
+    // Beats hint (difference frequency) for interval mode
+    if(!isChord){
+      const r = parseRatio(state.interval);
+      const f1 = state.freq;
+      const f2 = state.freq * r;
+      const beat = Math.abs(f2 - f1);
+      $("#beatsLabel").textContent = beat.toFixed(1) + " Hz";
+      $("#beatsText").textContent =
+        beat < 0.8 ? "So close they almost fuse into one tone." :
+        beat < 6   ? "Slow wobble: you’ll hear gentle beating." :
+        beat < 18  ? "Faster wobble: this can feel ‘rough’ or buzzy." :
+                     "Beyond this, it becomes more like a separate texture than a wobble.";
+    } else {
+      $("#beatsLabel").textContent = "Chord";
+      $("#beatsText").textContent =
+        "Chords create a web of pairwise intervals. Simple ratio stacks often feel stable; adding the 7/4 flavor can feel jazzy and a bit spicy.";
+    }
+  }
+
+  // ---------- UI Binding ----------
+  function syncUI(){
+    $("#freq").value = String(state.freq);
+    $("#vFreq").textContent = String(state.freq);
+
+    $("#wave").value = state.wave;
+    $("#vWave").textContent = state.wave;
+
+    $("#harm").value = String(state.harm);
+    $("#vHarm").textContent = state.harm.toFixed(2);
+
+    $("#attack").value = String(state.attack);
+    $("#release").value = String(state.release);
+    $("#vEnv").textContent = `${state.attack} / ${state.release}`;
+
+    $("#interval").value = state.interval;
+    $("#mix").value = String(state.mix);
+    $("#vMix").textContent = state.mix.toFixed(2);
+
+    // Pretty interval label
+    const sel = $("#interval");
+    const txt = sel.options[sel.selectedIndex]?.textContent || state.interval;
+    $("#vInterval").textContent = txt;
+
+    updateScoreUI();
+  }
+
+  function applyWhilePlaying(){
+    if(!ctx || !state.isPlaying) return;
+
+    const now = ctx.currentTime;
+    const attack = state.attack / 1000;
+
+    // filter brightness
+    const lp = lerp(1200, 16000, state.harm);
+    harmFilter.frequency.setTargetAtTime(lp, now, 0.04);
+
+    const isChord = state.interval.startsWith("CHORD:");
+    if(isChord){
+      // For simplicity: restart chord voices to reflect changes
+      startVoices();
+      return;
+    }
+
+    // two-osc mode update
+    if(baseOsc && intOsc){
+      baseOsc.type = state.wave;
+      intOsc.type = state.wave;
+
+      baseOsc.frequency.setTargetAtTime(state.freq, now, 0.015);
+      const r = parseRatio(state.interval);
+      intOsc.frequency.setTargetAtTime(state.freq * r, now, 0.015);
+
+      const intLevel = 0.24 * state.mix;
+      intGain.gain.cancelScheduledValues(now);
+      intGain.gain.setValueAtTime(intGain.gain.value, now);
+      intGain.gain.linearRampToValueAtTime(intLevel, now + Math.max(0.01, attack));
+    }
+  }
+
+  // ---------- Visuals ----------
+  const waveCanvas = $("#waveCanvas");
+  const specCanvas = $("#specCanvas");
+  const geoCanvas  = $("#geoCanvas");
+
+  const wctx = waveCanvas.getContext("2d");
+  const sctx = specCanvas.getContext("2d");
+  const gctx = geoCanvas.getContext("2d");
+
+  const timeData = new Uint8Array(2048);
+  const freqData = new Uint8Array(1024);
+
+  function drawGrid(ctx, width, height){
+    ctx.save();
+    ctx.globalAlpha = 0.12;
+    ctx.lineWidth = 1;
+
+    const stepX = Math.max(60, Math.floor(width / 12));
+    const stepY = Math.max(40, Math.floor(height / 6));
+
+    for(let x=0; x<=width; x+=stepX){
+      ctx.beginPath();
+      ctx.moveTo(x,0); ctx.lineTo(x,height);
+      ctx.stroke();
+    }
+    for(let y=0; y<=height; y+=stepY){
+      ctx.beginPath();
+      ctx.moveTo(0,y); ctx.lineTo(width,y);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function render(){
+    requestAnimationFrame(render);
+
+    // background clear
+    wctx.clearRect(0,0,waveCanvas.width,waveCanvas.height);
+    sctx.clearRect(0,0,specCanvas.width,specCanvas.height);
+    gctx.clearRect(0,0,geoCanvas.width,geoCanvas.height);
+
+    // grid
+    wctx.strokeStyle = "rgba(255,255,255,.20)";
+    sctx.strokeStyle = "rgba(255,255,255,.20)";
+    gctx.strokeStyle = "rgba(255,255,255,.20)";
+    drawGrid(wctx, waveCanvas.width, waveCanvas.height);
+    drawGrid(sctx, specCanvas.width, specCanvas.height);
+    drawGrid(gctx, geoCanvas.width, geoCanvas.height);
+
+    // if no analyser, draw a friendly idle
+    if(!analyser){
+      wctx.save();
+      wctx.fillStyle = "rgba(255,255,255,.55)";
+      wctx.font = "650 28px ui-sans-serif, system-ui";
+      wctx.fillText("Click Play to enable audio", 40, 90);
+      wctx.fillStyle = "rgba(255,255,255,.35)";
+      wctx.font = "14px ui-sans-serif, system-ui";
+      wctx.fillText("Your browser requires a user gesture before sound can start.", 40, 120);
+      wctx.restore();
+      return;
+    }
+
+    analyser.getByteTimeDomainData(timeData);
+    analyser.getByteFrequencyData(freqData);
+
+    // Waveform
+    wctx.save();
+    wctx.lineWidth = 3;
+    wctx.strokeStyle = getComputedStyle(document.body).getPropertyValue("--accent").trim() || "#7aa7ff";
+    wctx.beginPath();
+    const mid = waveCanvas.height/2;
+    for(let i=0; i<timeData.length; i++){
+      const x = (i/(timeData.length-1)) * waveCanvas.width;
+      const v = (timeData[i]-128)/128;
+      const y = mid + v * (waveCanvas.height*0.36);
+      if(i===0) wctx.moveTo(x,y);
+      else wctx.lineTo(x,y);
+    }
+    wctx.stroke();
+
+    // Beats hint (roughness) overlay: draw an envelope estimate from short-time energy
+    // (lightweight: sample absolute deviation)
+    wctx.globalAlpha = 0.40;
+    wctx.strokeStyle = getComputedStyle(document.body).getPropertyValue("--good").trim() || "#49d79a";
+    wctx.lineWidth = 2;
+    wctx.beginPath();
+    const windowSize = 64;
+    for(let i=0; i<timeData.length; i+=windowSize){
+      let sum = 0;
+      for(let j=0; j<windowSize && (i+j)<timeData.length; j++){
+        sum += Math.abs((timeData[i+j]-128)/128);
+      }
+      const avg = sum / windowSize;
+      const x = (i/(timeData.length-1)) * waveCanvas.width;
+      const y = waveCanvas.height - (avg * waveCanvas.height*0.85) - 10;
+      if(i===0) wctx.moveTo(x,y);
+      else wctx.lineTo(x,y);
+    }
+    wctx.stroke();
+    wctx.restore();
+
+    // Spectrum bars (log-ish)
+    sctx.save();
+    const accent2 = getComputedStyle(document.body).getPropertyValue("--accent2").trim() || "#b08cff";
+    sctx.fillStyle = accent2;
+    sctx.globalAlpha = 0.85;
+
+    const N = freqData.length;
+    const W = specCanvas.width;
+    const H = specCanvas.height;
+    const bars = 90;
+
+    for(let b=0; b<bars; b++){
+      const t0 = b / bars;
+      const t1 = (b+1) / bars;
+
+      // log mapping
+      const i0 = Math.floor((t0*t0) * (N-1));
+      const i1 = Math.max(i0+1, Math.floor((t1*t1) * (N-1)));
+
+      let peak = 0;
+      for(let i=i0; i<i1; i++) peak = Math.max(peak, freqData[i]);
+
+      const x = (b / bars) * W;
+      const bw = (W / bars) * 0.86;
+      const val = peak / 255;
+      const h = Math.max(2, val * (H*0.88));
+      const y = H - h;
+
+      sctx.fillRect(x, y, bw, h);
+    }
+
+    // Labels
+    sctx.globalAlpha = 0.55;
+    sctx.fillStyle = "rgba(255,255,255,.65)";
+    sctx.font = "12px ui-sans-serif, system-ui";
+    sctx.fillText("low → high frequency", 14, 20);
+    sctx.restore();
+
+    // Geometry (Lissajous)
+    gctx.save();
+    const aColor = getComputedStyle(document.body).getPropertyValue("--good").trim() || "#49d79a";
+    gctx.strokeStyle = aColor;
+    gctx.globalAlpha = 0.85;
+    gctx.lineWidth = 2;
+
+    // Choose a ratio to visualize
+    let ratio = 3/2;
+    if(state.interval.startsWith("CHORD:")){
+      const mode = state.interval.split(":")[1];
+      ratio = ({ maj: 3/2, min: 3/2, "7": 7/4, sus4: 4/3 })[mode] || 3/2;
+    } else {
+      ratio = parseRatio(state.interval);
+    }
+
+    // Convert ratio to small-ish integers for stable geometry
+    const rs = ratioToNiceString(ratio); // e.g. "3:2"
+    const parts = rs.split(":").map(n => Math.max(1, Math.min(16, Number(n)||1)));
+    const ax = parts[0] || 3;
+    const by = parts[1] || 2;
+
+    const Wg = geoCanvas.width, Hg = geoCanvas.height;
+    const cx = Wg/2, cy = Hg/2;
+    const scale = Math.min(Wg, Hg) * 0.38;
+    const phase = (ctx ? ctx.currentTime : performance.now()/1000) * 0.6;
+
+    gctx.beginPath();
+    const steps = 1600;
+    for(let i=0;i<=steps;i++){
+      const t = (i/steps) * Math.PI * 2;
+      const x = Math.sin(ax*t + phase);
+      const y = Math.sin(by*t);
+      const px = cx + x*scale;
+      const py = cy + y*scale;
+      if(i===0) gctx.moveTo(px,py);
+      else gctx.lineTo(px,py);
+    }
+    gctx.stroke();
+
+    // Small label
+    gctx.globalAlpha = 0.55;
+    gctx.fillStyle = "rgba(255,255,255,.65)";
+    gctx.font = "12px ui-sans-serif, system-ui";
+    gctx.fillText(`Lissajous ratio ${ax}:${by}`, 14, 20);
+
+    gctx.restore();
+  }
+
+  // ---------- Events ----------
+  function wire(){
+    $("#freq").addEventListener("input", (e) => {
+      state.freq = Number(e.target.value);
+      $("#vFreq").textContent = String(state.freq);
+      writeHash(); updateScoreUI(); applyWhilePlaying();
+    });
+
+    $("#wave").addEventListener("change", (e) => {
+      state.wave = e.target.value;
+      $("#vWave").textContent = state.wave;
+      writeHash(); applyWhilePlaying();
+    });
+
+    $("#harm").addEventListener("input", (e) => {
+      state.harm = Number(e.target.value);
+      $("#vHarm").textContent = state.harm.toFixed(2);
+      writeHash(); applyWhilePlaying();
+    });
+
+    $("#attack").addEventListener("input", (e) => {
+      state.attack = Number(e.target.value);
+      $("#vEnv").textContent = `${state.attack} / ${state.release}`;
+      writeHash(); applyWhilePlaying();
+    });
+
+    $("#release").addEventListener("input", (e) => {
+      state.release = Number(e.target.value);
+      $("#vEnv").textContent = `${state.attack} / ${state.release}`;
+      writeHash();
+    });
+
+    $("#interval").addEventListener("change", (e) => {
+      state.interval = e.target.value;
+      const sel = $("#interval");
+      $("#vInterval").textContent = sel.options[sel.selectedIndex]?.textContent || state.interval;
+      writeHash(); updateScoreUI();
+      if(state.isPlaying) startVoices();
+    });
+
+    $("#mix").addEventListener("input", (e) => {
+      state.mix = Number(e.target.value);
+      $("#vMix").textContent = state.mix.toFixed(2);
+      writeHash(); updateScoreUI(); applyWhilePlaying();
+    });
+
+    $("#btnPlay").addEventListener("click", async () => {
+      ensureAudio();
+      if (ctx.state === "suspended") await ctx.resume();
+      startVoices();
+      toast("Audio on", "🔊");
+    });
+
+    $("#btnStop").addEventListener("click", () => {
+      stopAll();
+      toast("Stopped", "⏹");
+    });
+
+    $("#btnShare").addEventListener("click", async () => {
+      writeHash();
+      const url = location.href;
+      try{
+        await navigator.clipboard.writeText(url);
+        toast("Link copied", "🔗");
+      }catch(e){
+        const ta = document.createElement("textarea");
+        ta.value = url; document.body.appendChild(ta);
+        ta.select(); document.execCommand("copy");
+        ta.remove();
+        toast("Link copied", "🔗");
+      }
+    });
+
+    $("#btnRandom").addEventListener("click", () => {
+      const presets = ["1/1","16/15","9/8","6/5","5/4","4/3","45/32","3/2","8/5","5/3","15/8","2/1","CHORD:maj","CHORD:min","CHORD:7","CHORD:sus4"];
+      state.freq = [110, 138, 174, 196, 220, 246, 261, 293, 330, 349, 392, 440][Math.floor(Math.random()*12)];
+      state.wave = ["sine","triangle","sawtooth","square"][Math.floor(Math.random()*4)];
+      state.harm = Math.random()*0.95;
+      state.attack = Math.floor(Math.random()*45);
+      state.release = 120 + Math.floor(Math.random()*420);
+      state.interval = presets[Math.floor(Math.random()*presets.length)];
+      state.mix = 0.25 + Math.random()*0.75;
+
+      syncUI();
+      writeHash();
+      if(state.isPlaying) startVoices();
+      toast("Surprise loaded", "🎲");
+    });
+
+    document.querySelectorAll("[data-preset]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const p = btn.getAttribute("data-preset");
+        if(p === "fifth"){ state.interval="3/2"; state.mix=0.65; state.wave="sine"; state.harm=0.35; }
+        if(p === "oct"){ state.interval="2/1"; state.mix=0.70; state.wave="triangle"; state.harm=0.30; }
+        if(p === "triad"){ state.interval="CHORD:maj"; state.mix=0.78; state.wave="triangle"; state.harm=0.45; }
+        if(p === "tritone"){ state.interval="45/32"; state.mix=0.80; state.wave="sawtooth"; state.harm=0.70; state.freq=220; }
+        if(p === "pos432"){ state.freq=432; state.interval="2/1"; state.mix=0.55; state.wave="sine"; state.harm=0.25; state.attack=10; state.release=180; }
+        if(p === "pos528"){ state.freq=528; state.interval="5/4"; state.mix=0.65; state.wave="triangle"; state.harm=0.35; state.attack=10; state.release=180; }
+        if(p === "geometry"){ state.interval="3/2"; state.mix=0.55; state.wave="sine"; state.harm=0.15; state.freq=220; }
+        syncUI();
+        writeHash();
+        if(state.isPlaying) startVoices();
+        toast("Preset applied", "⚡");
+      });
+    });
+
+    // Keyboard play: A S D F around base
+    const keyMap = {
+      "a": 1,
+      "s": 9/8,
+      "d": 5/4,
+      "f": 3/2
+    };
+    window.addEventListener("keydown", async (e) => {
+      const k = e.key.toLowerCase();
+      if(!(k in keyMap)) return;
+      ensureAudio();
+      if (ctx.state === "suspended") await ctx.resume();
+
+      // Play a quick note using current timbre
+      const now = ctx.currentTime;
+      const o = ctx.createOscillator();
+      o.type = state.wave;
+      o.frequency.value = state.freq * keyMap[k];
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, now);
+      g.gain.linearRampToValueAtTime(0.22, now + 0.015);
+      g.gain.linearRampToValueAtTime(0.0001, now + 0.18);
+      o.connect(g); g.connect(master);
+      o.start(now); o.stop(now + 0.22);
+
+      toast(`Key ${k.toUpperCase()} played`, "⌨️");
+    });
+
+    // Konami code -> synthwave mode
+    const konami = ["arrowup","arrowup","arrowdown","arrowdown","arrowleft","arrowright","arrowleft","arrowright","b","a"];
+    let kk = 0;
+    window.addEventListener("keydown", (e) => {
+      const k = e.key.toLowerCase();
+      if(k === konami[kk]){
+        kk++;
+        if(kk === konami.length){
+          kk = 0;
+          document.body.classList.toggle("synthwave");
+          toast(document.body.classList.contains("synthwave") ? "Synthwave mode" : "Classic mode", "🌈");
+        }
+      } else {
+        kk = (k === konami[0]) ? 1 : 0;
+      }
+    });
+
+    // React to hash changes (share links)
+    window.addEventListener("hashchange", () => {
+      readHash();
+      syncUI();
+      if(state.isPlaying) startVoices();
+    });
+  }
+
+  // ---------- Init ----------
+  readHash();
+  syncUI();
+  wire();
+  render();
+})();
+</script>
+</body>
+</html>
